@@ -2,6 +2,14 @@
 
 from django.db import migrations
 
+def create_groups(apps, schema_editor):
+
+    Group = apps.get_model("auth", "Group")
+
+    Group.objects.get_or_create(name="Manager")
+    Group.objects.get_or_create(name="Staff")
+    Group.objects.get_or_create(name="Guest")
+
 
 class Migration(migrations.Migration):
 
@@ -10,4 +18,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(create_groups),
     ]
