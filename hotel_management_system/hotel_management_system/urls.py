@@ -11,10 +11,10 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-    path('accounts/api/',include('accounts.urls')),
+    path('api/accounts/',include('accounts.urls')),
     path('rooms/api/',include('rooms.urls')),
     path('payments/api/',include('payments.urls')),
-    path('bookins/api/',include('bookings.urls'))
+    path('bookings/api/',include('bookings.urls'))
 ]
 
 
