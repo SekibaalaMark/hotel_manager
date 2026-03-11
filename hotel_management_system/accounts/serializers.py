@@ -35,3 +35,34 @@ class LoginSerializer(serializers.Serializer):
             "username": user.username,
             "role": role
         }
+
+
+
+from rest_framework import serializers
+from django.contrib.auth.models import Group
+from .models import CustomUser
+
+
+class GuestRegistrationSerializer(serializers.ModelSerializer):
+
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ["id","username","email","phone","password"]
+
+    def create(self, validated_data):
+        validated_data.pop("confirm_password")
+
+        password = validated_data.pop("password")
+
+        user = CustomUser(**validated_data)
+        user.set_password(password)
+
+        user.save()
+
+        guest_group = Group.objects.get(name="Guest")
+        user.groups.add(guest_group)
+
+        return user
