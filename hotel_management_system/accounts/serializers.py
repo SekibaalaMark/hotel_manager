@@ -96,8 +96,6 @@ class StaffCreateSerializer(serializers.ModelSerializer):
         user.must_change_password = True
 
         user.save()
-        staff_group = Group.objects.get(name="Staff")
-        user.groups.add(staff_group)
 
         return user
     
