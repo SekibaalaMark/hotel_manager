@@ -50,7 +50,7 @@ class GuestRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["id","username","email","phone","password"]
+        fields = ["id","username","email","phone","password","confirm_password"]
 
     def create(self, validated_data):
         validated_data.pop("confirm_password")
