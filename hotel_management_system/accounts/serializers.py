@@ -33,7 +33,8 @@ class LoginSerializer(serializers.Serializer):
             "access": str(refresh.access_token),
             "user_id": user.id,
             "username": user.username,
-            "role": role
+            "role": role,
+            "must_change_password": user.must_change_password
         }
 
 
