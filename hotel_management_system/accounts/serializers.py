@@ -66,3 +66,40 @@ class GuestRegistrationSerializer(serializers.ModelSerializer):
         user.groups.add(guest_group)
 
         return user
+    
+
+
+
+
+
+class StaffCreateSerializer(serializers.ModelSerializer):
+
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "id",
+            "username",
+            "email",
+            "phone",
+            "password"
+        ]
+
+    def create(self, validated_data):
+
+        password = validated_data.pop("password")
+
+        user = CustomUser(**validated_data)
+        user.set_password(password)
+
+        user.must_change_password = True
+
+        user.save()
+        staff_group = Group.objects.get(name="Staff")
+        user.groups.add(staff_group)
+
+        return user
+    
+
+    
