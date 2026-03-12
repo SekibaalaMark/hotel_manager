@@ -55,3 +55,19 @@ class BulkRoomCreateSerializer(serializers.Serializer):
 
         return rooms
 
+
+
+
+
+
+
+class RoomUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Room
+        fields = [
+            "number",
+            "room_type",
+            "price_per_night",
+            "is_available"
+        ]
