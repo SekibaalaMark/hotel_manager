@@ -55,3 +55,42 @@ class BulkCreateRoomView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+
+
+
+
+
+
+from django.shortcuts import get_object_or_404
+
+class UpdateRoomView(APIView):
+
+    permission_classes = [IsAuthenticated, IsManager]
+
+    def patch(self, request, room_id):
+
+        room = get_object_or_404(Room, id=room_id)
+
+        serializer = RoomUpdateSerializer(
+            room,
+            data=request.data,
+            partial=True
+        )
+
+        if serializer.is_valid():
+
+            serializer.save()
+
+            return Response(
+                {
+                    "message": "Room updated successfully",
+                    "room": serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
