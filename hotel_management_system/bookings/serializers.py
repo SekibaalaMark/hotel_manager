@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Booking
 from rooms.models import Room
 
-from rest_framework import serializers
+
 from .models import Booking
 from datetime import timedelta
 
