@@ -48,3 +48,30 @@ class BookingSerializer(serializers.ModelSerializer):
         )
 
         return booking
+    
+    
+    
+
+
+class BookingInvoiceSerializer(serializers.ModelSerializer):
+
+    room_number = serializers.CharField(source="room.number")
+    price_per_night = serializers.DecimalField(
+        source="room.price_per_night",
+        max_digits=8,
+        decimal_places=2
+    )
+    guest_name = serializers.CharField(source="guest.username")
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id",
+            "guest_name",
+            "room_number",
+            "check_in",
+            "check_out",
+            "price_per_night",
+            "total_cost",
+            "status"
+        ]
