@@ -1,7 +1,5 @@
 from django.db import models
 
-
-
 class Booking(models.Model):
 
     STATUS = [
@@ -17,6 +15,8 @@ class Booking(models.Model):
 
     check_in = models.DateField()
     check_out = models.DateField()
+
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     status = models.CharField(max_length=20, choices=STATUS, default="pending")
 
