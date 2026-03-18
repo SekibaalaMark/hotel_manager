@@ -13,7 +13,7 @@ urlpatterns = [
 
     path('api/accounts/',include('accounts.urls')),
     path('api/rooms/',include('rooms.urls')),
-    path('payments/api/',include('payments.urls')),
+    path('api/payments/',include('payments.urls')),
     path('api/bookings/',include('bookings.urls'))
 ]
 
