@@ -6,4 +6,5 @@ urlpatterns = [  # Must be exactly this name
     path("create/", CreateRoomView.as_view(), name="create-room"),
     path("bulk-create/", BulkCreateRoomView.as_view()),
     path("update/<int:room_id>/", UpdateRoomView.as_view()),
+    path("available/", AvailableRoomsView.as_view()),
 ]
