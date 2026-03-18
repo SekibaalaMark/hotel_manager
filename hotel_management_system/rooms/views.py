@@ -94,3 +94,43 @@ class UpdateRoomView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.db.models import Q
+
+from .models import Room
+from bookings.models import Booking
+from .serializers import RoomListSerializer
+
+
+class AvailableRoomsView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        check_in = request.query_params.get("check_in")
+        check_out = request.query_params.get("check_out")
+
+        if not check_in or not check_out:
+            return Response(
+                {"error": "check_in and check_out are required"},
+                status=400
+            )
+
+        booked_rooms = Booking.objects.filter(
+            Q(check_in__lt=check_out) &
+            Q(check_out__gt=check_in)
+        ).values_list("room_id", flat=True)
+
+        rooms = Room.objects.exclude(id__in=booked_rooms)
+
+        serializer = RoomListSerializer(rooms, many=True)
+
+        return Response(serializer.data)
