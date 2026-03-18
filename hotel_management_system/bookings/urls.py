@@ -1,7 +1,6 @@
-# rooms/urls.py
 from django.urls import path
-from . import views
+from .views import CreateBookingView
 
-urlpatterns = [  # Must be exactly this name
-
+urlpatterns = [
+    path("create/", CreateBookingView.as_view()),
 ]
