@@ -8,7 +8,10 @@ class Payment(models.Model):
         ("mobile_money", "Mobile Money")
     ]
 
-    booking = models.ForeignKey('bookings.Booking', on_delete=models.CASCADE)
+    booking = models.OneToOneField(
+        'bookings.Booking',
+        on_delete=models.CASCADE
+    )
 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
 
