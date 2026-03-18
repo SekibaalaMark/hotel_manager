@@ -71,3 +71,18 @@ class RoomUpdateSerializer(serializers.ModelSerializer):
             "price_per_night",
             "is_available"
         ]
+        
+        
+
+
+class RoomListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Room
+        fields = [
+            "id",
+            "number",
+            "room_type",
+            "price_per_night",
+            "is_available"
+        ]
