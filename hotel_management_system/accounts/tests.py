@@ -135,3 +135,34 @@ class GuestRegistrationSerializerTest(TestCase):
         serializer = GuestRegistrationSerializer(data={"username": "incomplete"})
         self.assertFalse(serializer.is_valid())
         self.assertIn("password", serializer.errors)
+        
+        
+
+
+class StaffCreateSerializer(serializers.ModelSerializer):
+
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "id",
+            "username",
+            "email",
+            "phone",
+            "password"
+        ]
+
+    def create(self, validated_data):
+
+        password = validated_data.pop("password")
+
+        user = CustomUser(**validated_data)
+        user.set_password(password)
+
+        user.must_change_password = True
+
+        user.save()
+
+        return user
+    
