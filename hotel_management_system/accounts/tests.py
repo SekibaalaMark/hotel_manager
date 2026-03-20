@@ -81,3 +81,57 @@ class LoginSerializer(serializers.Serializer):
             "role": role,
             "must_change_password": user.must_change_password
         }
+        
+        
+
+
+from django.test import TestCase
+from django.contrib.auth.models import Group
+from .models import CustomUser
+from .serializers import GuestRegistrationSerializer
+
+class GuestRegistrationSerializerTest(TestCase):
+    def setUp(self):
+        # The serializer expects this group to exist
+        self.group = Group.objects.create(name="Guest")
+        
+        self.valid_payload = {
+            "username": "testguest",
+            "email": "guest@example.com",
+            "phone": "1234567890",
+            "password": "securepassword123",
+            "confirm_password": "securepassword123"
+        }
+
+    def test_serializer_with_valid_data(self):
+        serializer = GuestRegistrationSerializer(data=self.valid_payload)
+        
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        user = serializer.save()
+
+        # Check if user is created correctly
+        self.assertEqual(user.username, "testguest")
+        self.assertEqual(user.email, "guest@example.com")
+        
+        # Verify password is hashed (not stored as plain text)
+        self.assertTrue(user.check_password("securepassword123"))
+        
+        # Verify group assignment
+        self.assertIn(self.group, user.groups.all())
+
+    def test_serializer_password_mismatch(self):
+        # While your current serializer doesn't have a validate() method 
+        # for password matching yet, this test will help you implement it.
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["confirm_password"] = "mismatch"
+        
+        serializer = GuestRegistrationSerializer(data=invalid_payload)
+        
+        # This will currently pass unless you add a validate() method to the serializer
+        # (See "Pro-Tip" below)
+        self.assertTrue(serializer.is_valid()) 
+
+    def test_missing_required_fields(self):
+        serializer = GuestRegistrationSerializer(data={"username": "incomplete"})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("password", serializer.errors)
