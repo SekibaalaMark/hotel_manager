@@ -68,3 +68,74 @@ class BookingModelTest(TestCase):
         
         self.guest.delete()
         self.assertEqual(Booking.objects.count(), 0)
+        
+        
+        
+
+
+from django.test import RequestFactory, TestCase
+from django.contrib.auth import get_user_model
+from datetime import date, timedelta
+from decimal import Decimal
+
+from rooms.models import Room
+from .serializers import BookingSerializer
+from .models import Booking
+
+User = get_user_model()
+
+class BookingSerializerTest(TestCase):
+    def setUp(self):
+        # 1. Setup User and Room
+        self.user = User.objects.create_user(username="traveller", password="password")
+        self.room = Room.objects.create(
+            room_number="202", 
+            price_per_night=Decimal("100.00")
+        )
+        
+        # 2. Mock a request with the user attached (needed for create() method)
+        factory = RequestFactory()
+        request = factory.post('/')
+        request.user = self.user
+        self.context = {'request': request}
+
+        self.valid_data = {
+            "room": self.room.id,
+            "check_in": date.today(),
+            "check_out": date.today() + timedelta(days=3)
+        }
+
+    def test_booking_calculation_logic(self):
+        """Verify that total_cost is calculated correctly (100 * 3 days = 300)"""
+        serializer = BookingSerializer(data=self.valid_data, context=self.context)
+        
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        booking = serializer.save()
+
+        # Calculation Check: (Check-out - Check-in) = 3 days. 3 * 100 = 300.
+        self.assertEqual(booking.total_cost, Decimal("300.00"))
+        self.assertEqual(booking.guest, self.user)
+
+    def test_invalid_date_validation(self):
+        """Verify that check_in after check_out raises a ValidationError"""
+        invalid_data = self.valid_data.copy()
+        invalid_data["check_in"] = date.today() + timedelta(days=5)
+        invalid_data["check_out"] = date.today() + timedelta(days=2)
+
+        serializer = BookingSerializer(data=invalid_data, context=self.context)
+        
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("non_field_errors", serializer.errors)
+        self.assertEqual(serializer.errors["non_field_errors"][0], "Invalid dates")
+
+    def test_read_only_fields(self):
+        """Verify users cannot bypass pricing by sending their own total_cost"""
+        data_with_price = self.valid_data.copy()
+        data_with_price["total_cost"] = 1.00 # Attempting to pay only $1
+        
+        serializer = BookingSerializer(data=data_with_price, context=self.context)
+        self.assertTrue(serializer.is_valid())
+        booking = serializer.save()
+
+        # Should ignore the 1.00 and calculate 300.00
+        self.assertEqual(booking.total_cost, Decimal("300.00"))
