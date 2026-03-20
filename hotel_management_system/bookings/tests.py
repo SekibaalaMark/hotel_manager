@@ -139,3 +139,64 @@ class BookingSerializerTest(TestCase):
 
         # Should ignore the 1.00 and calculate 300.00
         self.assertEqual(booking.total_cost, Decimal("300.00"))
+        
+        
+        
+
+
+from django.test import TestCase
+from django.contrib.auth import get_user_model
+from datetime import date, timedelta
+from decimal import Decimal
+
+from rooms.models import Room
+from .models import Booking
+from .serializers import BookingInvoiceSerializer
+
+User = get_user_model()
+
+class BookingInvoiceSerializerTest(TestCase):
+    def setUp(self):
+        # 1. Create dependencies
+        self.user = User.objects.create_user(username="john_doe", password="password123")
+        self.room = Room.objects.create(
+            number="305-A", 
+            price_per_night=Decimal("250.00")
+        )
+        
+        # 2. Create the Booking object
+        self.booking = Booking.objects.create(
+            guest=self.user,
+            room=self.room,
+            check_in=date(2026, 5, 1),
+            check_out=date(2026, 5, 5),
+            total_cost=Decimal("1000.00"),
+            status="confirmed"
+        )
+
+    def test_invoice_serialization_output(self):
+        """Verify that the serializer correctly flattens related object data"""
+        serializer = BookingInvoiceSerializer(instance=self.booking)
+        data = serializer.data
+
+        # Check flattened fields from the 'source' attribute
+        self.assertEqual(data["guest_name"], "john_doe")
+        self.assertEqual(data["room_number"], "305-A")
+        self.assertEqual(Decimal(data["price_per_night"]), Decimal("250.00"))
+        
+        # Check direct model fields
+        self.assertEqual(data["id"], self.booking.id)
+        self.assertEqual(data["check_in"], "2026-05-01")
+        self.assertEqual(data["status"], "confirmed")
+        self.assertEqual(Decimal(data["total_cost"]), Decimal("1000.00"))
+
+    def test_read_only_nature(self):
+        """Verify that price_per_night and guest_name are present in the output"""
+        serializer = BookingInvoiceSerializer(instance=self.booking)
+        
+        # Ensure the keys exist in the output
+        expected_keys = {
+            "id", "guest_name", "room_number", "check_in", 
+            "check_out", "price_per_night", "total_cost", "status"
+        }
+        self.assertEqual(set(serializer.data.keys()), expected_keys)
