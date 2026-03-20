@@ -166,3 +166,54 @@ class StaffCreateSerializer(serializers.ModelSerializer):
 
         return user
     
+
+
+
+from django.urls import reverse
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class LoginViewTest(APITestCase):
+    def setUp(self):
+        self.url = reverse('login')  # Ensure this matches your urls.py name
+        self.username = "testuser"
+        self.password = "secure_pass123"
+        
+        # Create a user to test against
+        self.user = User.objects.create_user(
+            username=self.username,
+            password=self.password,
+            email="test@example.com"
+        )
+
+    def test_login_success(self):
+        """Test that valid credentials return a 200 OK"""
+        data = {
+            "username": self.username,
+            "password": self.password
+        }
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify that the response contains expected keys (e.g., token or user info)
+        # self.assertIn('token', response.data) 
+
+    def test_login_invalid_credentials(self):
+        """Test that wrong credentials return a 400 or 401 (depending on serializer logic)"""
+        data = {
+            "username": self.username,
+            "password": "wrongpassword"
+        }
+        response = self.client.post(self.url, data, format='json')
+
+        # Your view returns 400_BAD_REQUEST on serializer failure
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('non_field_errors', response.data)
+
+    def test_login_missing_fields(self):
+        """Test that empty payload returns 400"""
+        response = self.client.post(self.url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
