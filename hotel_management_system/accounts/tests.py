@@ -277,3 +277,68 @@ class GuestRegisterViewTest(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("username", response.data)
+        
+        
+
+
+from django.urls import reverse
+from django.contrib.auth.models import Group
+from rest_framework.test import APITestCase
+from rest_framework import status
+from .models import CustomUser
+
+class CreateStaffUserViewTest(APITestCase):
+    def setUp(self):
+        # 1. Create the required groups
+        self.staff_group = Group.objects.create(name="Staff")
+        self.manager_group = Group.objects.create(name="Manager")
+        
+        # 2. Create a Manager user to perform the action
+        self.manager = CustomUser.objects.create_user(
+            username="manager_user", 
+            password="password123"
+        )
+        self.manager.groups.add(self.manager_group)
+        
+        # 3. Create a regular user (to test unauthorized access)
+        self.regular_user = CustomUser.objects.create_user(
+            username="regular_user", 
+            password="password123"
+        )
+
+        self.url = reverse('staff-create') # Ensure this matches your urls.py
+        self.valid_payload = {
+            "username": "new_staff",
+            "email": "staff@company.com",
+            "phone": "123456789",
+            "password": "temporary_pass"
+        }
+
+    def test_create_staff_success_as_manager(self):
+        """Verify a manager can create staff and the 'Staff' group is assigned"""
+        self.client.force_authenticate(user=self.manager)
+        
+        response = self.client.post(self.url, self.valid_payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Verify database side effects
+        user = CustomUser.objects.get(username="new_staff")
+        self.assertTrue(user.groups.filter(name="Staff").exists())
+        self.assertTrue(user.must_change_password)
+
+    def test_create_staff_forbidden_for_regular_user(self):
+        """Verify that a non-manager user cannot create staff"""
+        self.client.force_authenticate(user=self.regular_user)
+        
+        response = self.client.post(self.url, self.valid_payload, format='json')
+
+        # Should be 403 Forbidden because of IsManager permission
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_staff_unauthenticated(self):
+        """Verify that unauthenticated requests are rejected"""
+        # No self.client.force_authenticate()
+        response = self.client.post(self.url, self.valid_payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
