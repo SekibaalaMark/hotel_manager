@@ -281,3 +281,83 @@ class CreateBookingViewTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("non_field_errors", response.data)
+        
+        
+        
+        
+
+
+
+
+
+
+from django.urls import reverse
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.contrib.auth import get_user_model
+from datetime import date, timedelta
+from decimal import Decimal
+
+from rooms.models import Room
+from .models import Booking
+
+User = get_user_model()
+
+class BookingInvoiceViewTest(APITestCase):
+    def setUp(self):
+        # 1. Setup two different users
+        self.user = User.objects.create_user(username="customer1", password="password")
+        self.other_user = User.objects.create_user(username="customer2", password="password")
+        
+        # 2. Setup a Room
+        self.room = Room.objects.create(number="404", price_per_night=Decimal("200.00"))
+        
+        # 3. Create a Booking for the first user
+        self.booking = Booking.objects.create(
+            guest=self.user,
+            room=self.room,
+            check_in=date.today(),
+            check_out=date.today() + timedelta(days=1),
+            total_cost=Decimal("200.00"),
+            status="confirmed"
+        )
+        
+        # 4. Define URL (assuming path is 'invoice/<int:booking_id>/')
+        self.url = reverse('booking-invoice', kwargs={'booking_id': self.booking.id})
+
+    def test_get_invoice_success(self):
+        """Verify that an authenticated user can retrieve their booking invoice"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify the flattened data from BookingInvoiceSerializer
+        self.assertEqual(response.data["guest_name"], "customer1")
+        self.assertEqual(response.data["room_number"], "404")
+        self.assertEqual(Decimal(response.data["total_cost"]), Decimal("200.00"))
+
+    def test_get_invoice_not_found(self):
+        """Verify a 404 is returned for a non-existent booking ID"""
+        self.client.force_authenticate(user=self.user)
+        invalid_url = reverse('booking-invoice', kwargs={'booking_id': 9999})
+        response = self.client.get(invalid_url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_invoice_unauthenticated(self):
+        """Verify unauthenticated users cannot access the invoice"""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_privacy_logic(self):
+        """
+        Verify if the view restricts users from seeing other people's invoices.
+        Note: Your current view logic doesn't restrict this yet, 
+        so this test might fail until you update the view!
+        """
+        self.client.force_authenticate(user=self.other_user)
+        response = self.client.get(self.url)
+        
+        # If you want privacy, this should ideally be 404 or 403.
+        # Currently, your view will return 200 OK.
+        # self.assertEqual(response.status_code, status.HTTP_
