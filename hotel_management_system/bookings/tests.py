@@ -200,3 +200,84 @@ class BookingInvoiceSerializerTest(TestCase):
             "check_out", "price_per_night", "total_cost", "status"
         }
         self.assertEqual(set(serializer.data.keys()), expected_keys)
+        
+        
+        
+        
+
+
+from django.urls import reverse
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.contrib.auth.models import Group
+from datetime import date, timedelta
+from decimal import Decimal
+
+from accounts.models import CustomUser
+from rooms.models import Room
+from .models import Booking
+
+class CreateBookingViewTest(APITestCase):
+    def setUp(self):
+        # 1. Create the Guest group and a Guest user
+        self.guest_group = Group.objects.create(name="Guest")
+        self.guest_user = CustomUser.objects.create_user(
+            username="guest_user", 
+            password="password123"
+        )
+        self.guest_user.groups.add(self.guest_group)
+
+        # 2. Create a Room (required for the serializer to calculate price)
+        self.room = Room.objects.create(
+            number="101", 
+            price_per_night=Decimal("150.00")
+        )
+
+        # 3. Setup URLs and Payloads
+        self.url = reverse('create-booking')  # Replace with your actual URL name
+        self.valid_payload = {
+            "room": self.room.id,
+            "check_in": date.today(),
+            "check_out": date.today() + timedelta(days=2)
+        }
+
+    def test_create_booking_success(self):
+        """Test that an authenticated Guest can successfully book a room"""
+        self.client.force_authenticate(user=self.guest_user)
+        
+        response = self.client.post(self.url, self.valid_payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["message"], "Room booked successfully")
+        
+        # Verify the booking exists in DB and total_cost was calculated (150 * 2)
+        booking = Booking.objects.get(id=response.data["booking_id"])
+        self.assertEqual(booking.total_cost, Decimal("300.00"))
+        self.assertEqual(booking.guest, self.guest_user)
+
+    def test_create_booking_unauthorized_user(self):
+        """Test that a non-Guest user (e.g., Staff) is rejected by IsGuest"""
+        staff_user = CustomUser.objects.create_user(username="staff", password="password")
+        self.client.force_authenticate(user=staff_user)
+        
+        response = self.client.post(self.url, self.valid_payload, format='json')
+        
+        # Should be 403 Forbidden because of the IsGuest permission
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_booking_unauthenticated(self):
+        """Test that unauthenticated requests are rejected"""
+        response = self.client.post(self.url, self.valid_payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_booking_invalid_dates(self):
+        """Test validation error for check_in after check_out"""
+        self.client.force_authenticate(user=self.guest_user)
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["check_in"] = date.today() + timedelta(days=5)
+        invalid_payload["check_out"] = date.today() + timedelta(days=1)
+
+        response = self.client.post(self.url, invalid_payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("non_field_errors", response.data)
