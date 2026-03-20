@@ -217,3 +217,63 @@ class LoginViewTest(APITestCase):
         """Test that empty payload returns 400"""
         response = self.client.post(self.url, {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+        
+
+from django.urls import reverse
+from django.contrib.auth.models import Group
+from rest_framework.test import APITestCase
+from rest_framework import status
+from .models import CustomUser
+
+class GuestRegisterViewTest(APITestCase):
+    def setUp(self):
+        # The serializer inside this view requires the "Guest" group to exist
+        self.group = Group.objects.create(name="Guest")
+        self.url = reverse('guest-register')  # Ensure this matches your urls.py 'name'
+        
+        self.valid_payload = {
+            "username": "newguest",
+            "email": "guest@test.com",
+            "phone": "0987654321",
+            "password": "password123",
+            "confirm_password": "password123"
+        }
+
+    def test_guest_registration_success(self):
+        """Test that a valid POST request creates a user and returns 201"""
+        response = self.client.post(self.url, self.valid_payload, format='json')
+
+        # Check status code
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check response message
+        self.assertEqual(response.data["message"], "Guest registered successfully")
+        self.assertEqual(response.data["username"], "newguest")
+
+        # Verify database state
+        user = CustomUser.objects.get(username="newguest")
+        self.assertTrue(user.groups.filter(name="Guest").exists())
+
+    def test_guest_registration_validation_failure(self):
+        """Test that missing fields return 400 Bad Request"""
+        incomplete_payload = {"username": "only_user"}
+        response = self.client.post(self.url, incomplete_payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Ensure errors are returned for missing fields
+        self.assertIn("password", response.data)
+        self.assertIn("email", response.data)
+
+    def test_duplicate_username_fails(self):
+        """Test that registering a username that already exists fails"""
+        # Create initial user
+        self.client.post(self.url, self.valid_payload, format='json')
+        
+        # Attempt to register again with same payload
+        response = self.client.post(self.url, self.valid_payload, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", response.data)
